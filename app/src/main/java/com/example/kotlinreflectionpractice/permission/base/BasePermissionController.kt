@@ -2,6 +2,7 @@ package com.example.kotlinreflectionpractice.permission.base
 
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.kotlinreflectionpractice.PermissionResult
@@ -20,6 +21,8 @@ abstract class BasePermissionController: Fragment() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        Log.d("BasePermissionController", "onRequestPermissionsResult(permissions=${permissions.joinToString()}, grantResults=${grantResults.joinToString()})")
+
         if (grantResults.isNotEmpty() &&
             grantResults.all { it == PackageManager.PERMISSION_GRANTED }
         ) {
@@ -50,21 +53,32 @@ abstract class BasePermissionController: Fragment() {
         }
 
         val notGranted = permissions.filter {
+            Log.d("BasePermissionController", "filter중인 permission:${it}, 결과:${
+                ContextCompat.checkSelfPermission(
+                    requireActivity(),
+                    it
+                )
+            }")
             ContextCompat.checkSelfPermission(
                 requireActivity(),
                 it
             ) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
 
+        Log.d("BasePermissionController", "notGranted:${notGranted.joinToString()}")
+
         when {
             notGranted.isEmpty() -> {
                 onPermissionResult(PermissionResult.PermissionGranted(requestId))
             }
             notGranted.any { shouldShowRequestPermissionRationale(it) } -> {
+                Log.d("BasePermissionController", "notGranted인 권한($notGranted)에 한해 shouldShowRequestPermissionRationale일 경우")
                 rationaleRequest[requestId] = true
-                onPermissionResult(PermissionResult.ShowRationale(requestId))
+                requestPermissions(notGranted, requestId)
+//                onPermissionResult(PermissionResult.ShowRationale(requestId))
             }
             else -> {
+                Log.d("BasePermissionController", "notGranted인 권한에 한해 requestPermissions($notGranted, requestId)")
                 requestPermissions(notGranted, requestId)
             }
         }
